@@ -542,22 +542,18 @@ em {
 
 .row__content-img {
 	aspect-ratio: 2;
-	height: 100px;
+	height: 10vw;
 	background-repeat: no-repeat;
 	background-size: contain;
 	background-position: 50% 50%;
 	cursor: pointer;
 }
-
-.bigger {
-	aspect-ratio: 2;
-	height: 170px;
-	background-repeat: no-repeat;
-	background-size: contain;
-	background-position: 50% 12%;
-	cursor: pointer;
+.bigger{
+	height: 19vw;
+	background-position: 50% 10%;
 	margin-left: 20px;
 }
+
 
 .row__content-imgwrap:nth-child(even) .row__content-img{
 	aspect-ratio: 1;
@@ -594,6 +590,8 @@ em {
 		justify-self: end;
 		grid-column: revert;
 	}
+
+	
 }
 
 
