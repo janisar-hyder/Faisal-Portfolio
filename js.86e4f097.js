@@ -117,616 +117,532 @@ parcelRequire = (function (modules, cache, entry, globalName) {
   }
 
   return newRequire;
-})({"../node_modules/parcel-bundler/src/builtins/bundle-url.js":[function(require,module,exports) {
-var bundleURL = null;
-function getBundleURLCached() {
-  if (!bundleURL) {
-    bundleURL = getBundleURL();
-  }
-  return bundleURL;
-}
-function getBundleURL() {
-  // Attempt to find the URL of the current script and use that as the base URL
-  try {
-    throw new Error();
-  } catch (err) {
-    var matches = ('' + err.stack).match(/(https?|file|ftp|chrome-extension|moz-extension):\/\/[^)\n]+/g);
-    if (matches) {
-      return getBaseURL(matches[0]);
-    }
-  }
-  return '/';
-}
-function getBaseURL(url) {
-  return ('' + url).replace(/^((?:https?|file|ftp|chrome-extension|moz-extension):\/\/.+)?\/[^/]+(?:\?.*)?$/, '$1') + '/';
-}
-exports.getBundleURL = getBundleURLCached;
-exports.getBaseURL = getBaseURL;
-},{}],"../node_modules/parcel-bundler/src/builtins/css-loader.js":[function(require,module,exports) {
-var bundle = require('./bundle-url');
-function updateLink(link) {
-  var newLink = link.cloneNode();
-  newLink.onload = function () {
-    link.remove();
-  };
-  newLink.href = link.href.split('?')[0] + '?' + Date.now();
-  link.parentNode.insertBefore(newLink, link.nextSibling);
-}
-var cssTimeout = null;
-function reloadCSS() {
-  if (cssTimeout) {
-    return;
-  }
-  cssTimeout = setTimeout(function () {
-    var links = document.querySelectorAll('link[rel="stylesheet"]');
-    for (var i = 0; i < links.length; i++) {
-      if (bundle.getBaseURL(links[i].href) === bundle.getBundleURL()) {
-        updateLink(links[i]);
-      }
-    }
-    cssTimeout = null;
-  }, 50);
-}
-module.exports = reloadCSS;
-},{"./bundle-url":"../node_modules/parcel-bundler/src/builtins/bundle-url.js"}],"../node_modules/splitting/dist/splitting.css":[function(require,module,exports) {
-
-        var reloadCSS = require('_css_loader');
-        module.hot.dispose(reloadCSS);
-        module.hot.accept(reloadCSS);
-      
-},{"_css_loader":"../node_modules/parcel-bundler/src/builtins/css-loader.js"}],"../node_modules/splitting/dist/splitting-cells.css":[function(require,module,exports) {
-
-        var reloadCSS = require('_css_loader');
-        module.hot.dispose(reloadCSS);
-        module.hot.accept(reloadCSS);
-      
-},{"_css_loader":"../node_modules/parcel-bundler/src/builtins/css-loader.js"}],"../node_modules/splitting/dist/splitting.js":[function(require,module,exports) {
+})({"../node_modules/ev-emitter/ev-emitter.js":[function(require,module,exports) {
 var define;
 var global = arguments[3];
-(function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global.Splitting = factory());
-}(this, (function () { 'use strict';
-
-var root = document;
-var createText = root.createTextNode.bind(root);
-
 /**
- * # setProperty
- * Apply a CSS var
- * @param {HTMLElement} el
- * @param {string} varName 
- * @param {string|number} value 
+ * EvEmitter v1.1.0
+ * Lil' event emitter
+ * MIT License
  */
-function setProperty(el, varName, value) {
-    el.style.setProperty(varName, value);
-} 
 
-/**
- * 
- * @param {!HTMLElement} el 
- * @param {!HTMLElement} child 
- */
-function appendChild(el, child) {
-  return el.appendChild(child);
-}
+/* jshint unused: true, undef: true, strict: true */
 
-/**
- * 
- * @param {!HTMLElement} parent 
- * @param {string} key 
- * @param {string} text 
- * @param {boolean} whitespace 
- */
-function createElement(parent, key, text, whitespace) {
-  var el = root.createElement('span');
-  key && (el.className = key); 
-  if (text) { 
-      !whitespace && el.setAttribute("data-" + key, text);
-      el.textContent = text; 
+( function( global, factory ) {
+  // universal module definition
+  /* jshint strict: false */ /* globals define, module, window */
+  if ( typeof define == 'function' && define.amd ) {
+    // AMD - RequireJS
+    define( factory );
+  } else if ( typeof module == 'object' && module.exports ) {
+    // CommonJS - Browserify, Webpack
+    module.exports = factory();
+  } else {
+    // Browser globals
+    global.EvEmitter = factory();
   }
-  return (parent && appendChild(parent, el)) || el;
-}
 
-/**
- * 
- * @param {!HTMLElement} el 
- * @param {string} key 
- */
-function getData(el, key) {
-  return el.getAttribute("data-" + key)
-}
+}( typeof window != 'undefined' ? window : this, function() {
 
-/**
- * 
- * @param {import('../types').Target} e 
- * @param {!HTMLElement} parent
- * @returns {!Array<!HTMLElement>}
- */
-function $(e, parent) {
-    return !e || e.length == 0
-        ? // null or empty string returns empty array
-          []
-        : e.nodeName
-            ? // a single element is wrapped in an array
-              [e]
-            : // selector and NodeList are converted to Element[]
-              [].slice.call(e[0].nodeName ? e : (parent || root).querySelectorAll(e));
-}
+"use strict";
 
-/**
- * Creates and fills an array with the value provided
- * @param {number} len
- * @param {() => T} valueProvider
- * @return {T}
- * @template T
- */
-function Array2D(len) {
-    var a = [];
-    for (; len--; ) {
-        a[len] = [];
+function EvEmitter() {}
+
+var proto = EvEmitter.prototype;
+
+proto.on = function( eventName, listener ) {
+  if ( !eventName || !listener ) {
+    return;
+  }
+  // set events hash
+  var events = this._events = this._events || {};
+  // set listeners array
+  var listeners = events[ eventName ] = events[ eventName ] || [];
+  // only add once
+  if ( listeners.indexOf( listener ) == -1 ) {
+    listeners.push( listener );
+  }
+
+  return this;
+};
+
+proto.once = function( eventName, listener ) {
+  if ( !eventName || !listener ) {
+    return;
+  }
+  // add event
+  this.on( eventName, listener );
+  // set once flag
+  // set onceEvents hash
+  var onceEvents = this._onceEvents = this._onceEvents || {};
+  // set onceListeners object
+  var onceListeners = onceEvents[ eventName ] = onceEvents[ eventName ] || {};
+  // set flag
+  onceListeners[ listener ] = true;
+
+  return this;
+};
+
+proto.off = function( eventName, listener ) {
+  var listeners = this._events && this._events[ eventName ];
+  if ( !listeners || !listeners.length ) {
+    return;
+  }
+  var index = listeners.indexOf( listener );
+  if ( index != -1 ) {
+    listeners.splice( index, 1 );
+  }
+
+  return this;
+};
+
+proto.emitEvent = function( eventName, args ) {
+  var listeners = this._events && this._events[ eventName ];
+  if ( !listeners || !listeners.length ) {
+    return;
+  }
+  // copy over to avoid interference if .off() in listener
+  listeners = listeners.slice(0);
+  args = args || [];
+  // once stuff
+  var onceListeners = this._onceEvents && this._onceEvents[ eventName ];
+
+  for ( var i=0; i < listeners.length; i++ ) {
+    var listener = listeners[i]
+    var isOnce = onceListeners && onceListeners[ listener ];
+    if ( isOnce ) {
+      // remove listener
+      // remove before trigger to prevent recursion
+      this.off( eventName, listener );
+      // unset once flag
+      delete onceListeners[ listener ];
     }
-    return a;
-}
+    // trigger listener
+    listener.apply( this, args );
+  }
 
-/**
- * A for loop wrapper used to reduce js minified size.
- * @param {!Array<T>} items 
- * @param {function(T):void} consumer
- * @template T
+  return this;
+};
+
+proto.allOff = function() {
+  delete this._events;
+  delete this._onceEvents;
+};
+
+return EvEmitter;
+
+}));
+
+},{}],"../node_modules/imagesloaded/imagesloaded.js":[function(require,module,exports) {
+var define;
+/*!
+ * imagesLoaded v4.1.4
+ * JavaScript is all like "You images are done yet or what?"
+ * MIT License
  */
-function each(items, consumer) {
-    items && items.some(consumer);
-}
 
-/**
- * @param {T} obj 
- * @return {function(string):*}
- * @template T
- */
-function selectFrom(obj) {
-    return function (key) {
-        return obj[key];
-    }
-}
+( function( window, factory ) { 'use strict';
+  // universal module definition
 
-/**
- * # Splitting.index
- * Index split elements and add them to a Splitting instance.
- *
- * @param {HTMLElement} element
- * @param {string} key 
- * @param {!Array<!HTMLElement> | !Array<!Array<!HTMLElement>>} items 
- */
-function index(element, key, items) {
-    var prefix = '--' + key;
-    var cssVar = prefix + "-index";
+  /*global define: false, module: false, require: false */
 
-    each(items, function (items, i) {
-        if (Array.isArray(items)) {
-            each(items, function(item) {
-                setProperty(item, cssVar, i);
-            });
-        } else {
-            setProperty(items, cssVar, i);
-        }
+  if ( typeof define == 'function' && define.amd ) {
+    // AMD
+    define( [
+      'ev-emitter/ev-emitter'
+    ], function( EvEmitter ) {
+      return factory( window, EvEmitter );
     });
+  } else if ( typeof module == 'object' && module.exports ) {
+    // CommonJS
+    module.exports = factory(
+      window,
+      require('ev-emitter')
+    );
+  } else {
+    // browser global
+    window.imagesLoaded = factory(
+      window,
+      window.EvEmitter
+    );
+  }
 
-    setProperty(element, prefix + "-total", items.length);
+})( typeof window !== 'undefined' ? window : this,
+
+// --------------------------  factory -------------------------- //
+
+function factory( window, EvEmitter ) {
+
+'use strict';
+
+var $ = window.jQuery;
+var console = window.console;
+
+// -------------------------- helpers -------------------------- //
+
+// extend objects
+function extend( a, b ) {
+  for ( var prop in b ) {
+    a[ prop ] = b[ prop ];
+  }
+  return a;
 }
 
-/**
- * @type {Record<string, import('./types').ISplittingPlugin>}
- */
-var plugins = {};
+var arraySlice = Array.prototype.slice;
+
+// turn element or nodeList into an array
+function makeArray( obj ) {
+  if ( Array.isArray( obj ) ) {
+    // use object if already an array
+    return obj;
+  }
+
+  var isArrayLike = typeof obj == 'object' && typeof obj.length == 'number';
+  if ( isArrayLike ) {
+    // convert nodeList to array
+    return arraySlice.call( obj );
+  }
+
+  // array of single index
+  return [ obj ];
+}
+
+// -------------------------- imagesLoaded -------------------------- //
 
 /**
- * @param {string} by
- * @param {string} parent
- * @param {!Array<string>} deps
- * @return {!Array<string>}
+ * @param {Array, Element, NodeList, String} elem
+ * @param {Object or Function} options - if function, use as callback
+ * @param {Function} onAlways - callback function
  */
-function resolvePlugins(by, parent, deps) {
-    // skip if already visited this dependency
-    var index = deps.indexOf(by);
-    if (index == -1) {
-        // if new to dependency array, add to the beginning
-        deps.unshift(by);
+function ImagesLoaded( elem, options, onAlways ) {
+  // coerce ImagesLoaded() without new, to be new ImagesLoaded()
+  if ( !( this instanceof ImagesLoaded ) ) {
+    return new ImagesLoaded( elem, options, onAlways );
+  }
+  // use elem as selector string
+  var queryElem = elem;
+  if ( typeof elem == 'string' ) {
+    queryElem = document.querySelectorAll( elem );
+  }
+  // bail if bad element
+  if ( !queryElem ) {
+    console.error( 'Bad element for imagesLoaded ' + ( queryElem || elem ) );
+    return;
+  }
 
-        // recursively call this function for all dependencies
-        var plugin = plugins[by];
-        if (!plugin) {
-            throw new Error("plugin not loaded: " + by);
-        }
-        each(plugin.depends, function(p) {
-            resolvePlugins(p, by, deps);
-        });
-    } else {
-        // if this dependency was added already move to the left of
-        // the parent dependency so it gets loaded in order
-        var indexOfParent = deps.indexOf(parent);
-        deps.splice(index, 1);
-        deps.splice(indexOfParent, 0, by);
+  this.elements = makeArray( queryElem );
+  this.options = extend( {}, this.options );
+  // shift arguments if no options set
+  if ( typeof options == 'function' ) {
+    onAlways = options;
+  } else {
+    extend( this.options, options );
+  }
+
+  if ( onAlways ) {
+    this.on( 'always', onAlways );
+  }
+
+  this.getImages();
+
+  if ( $ ) {
+    // add jQuery Deferred object
+    this.jqDeferred = new $.Deferred();
+  }
+
+  // HACK check async to allow time to bind listeners
+  setTimeout( this.check.bind( this ) );
+}
+
+ImagesLoaded.prototype = Object.create( EvEmitter.prototype );
+
+ImagesLoaded.prototype.options = {};
+
+ImagesLoaded.prototype.getImages = function() {
+  this.images = [];
+
+  // filter & find items if we have an item selector
+  this.elements.forEach( this.addElementImages, this );
+};
+
+/**
+ * @param {Node} element
+ */
+ImagesLoaded.prototype.addElementImages = function( elem ) {
+  // filter siblings
+  if ( elem.nodeName == 'IMG' ) {
+    this.addImage( elem );
+  }
+  // get background image on element
+  if ( this.options.background === true ) {
+    this.addElementBackgroundImages( elem );
+  }
+
+  // find children
+  // no non-element nodes, #143
+  var nodeType = elem.nodeType;
+  if ( !nodeType || !elementNodeTypes[ nodeType ] ) {
+    return;
+  }
+  var childImgs = elem.querySelectorAll('img');
+  // concat childElems to filterFound array
+  for ( var i=0; i < childImgs.length; i++ ) {
+    var img = childImgs[i];
+    this.addImage( img );
+  }
+
+  // get child background images
+  if ( typeof this.options.background == 'string' ) {
+    var children = elem.querySelectorAll( this.options.background );
+    for ( i=0; i < children.length; i++ ) {
+      var child = children[i];
+      this.addElementBackgroundImages( child );
     }
-    return deps;
-}
+  }
+};
 
-/**
- * Internal utility for creating plugins... essentially to reduce
- * the size of the library
- * @param {string} by 
- * @param {string} key 
- * @param {string[]} depends 
- * @param {Function} split 
- * @returns {import('./types').ISplittingPlugin}
- */
-function createPlugin(by, depends, key, split) {
-    return {
-        by: by,
-        depends: depends,
-        key: key,
-        split: split
+var elementNodeTypes = {
+  1: true,
+  9: true,
+  11: true
+};
+
+ImagesLoaded.prototype.addElementBackgroundImages = function( elem ) {
+  var style = getComputedStyle( elem );
+  if ( !style ) {
+    // Firefox returns null if in a hidden iframe https://bugzil.la/548397
+    return;
+  }
+  // get url inside url("...")
+  var reURL = /url\((['"])?(.*?)\1\)/gi;
+  var matches = reURL.exec( style.backgroundImage );
+  while ( matches !== null ) {
+    var url = matches && matches[2];
+    if ( url ) {
+      this.addBackground( url, elem );
     }
-}
+    matches = reURL.exec( style.backgroundImage );
+  }
+};
 
 /**
- *
- * @param {string} by
- * @returns {import('./types').ISplittingPlugin[]}
+ * @param {Image} img
  */
-function resolve(by) {
-    return resolvePlugins(by, 0, []).map(selectFrom(plugins));
-}
+ImagesLoaded.prototype.addImage = function( img ) {
+  var loadingImage = new LoadingImage( img );
+  this.images.push( loadingImage );
+};
 
-/**
- * Adds a new plugin to splitting
- * @param {import('./types').ISplittingPlugin} opts
- */
-function add(opts) {
-    plugins[opts.by] = opts;
-}
+ImagesLoaded.prototype.addBackground = function( url, elem ) {
+  var background = new Background( url, elem );
+  this.images.push( background );
+};
 
-/**
- * # Splitting.split
- * Split an element's textContent into individual elements
- * @param {!HTMLElement} el  Element to split
- * @param {string} key 
- * @param {string} splitOn 
- * @param {boolean} includePrevious 
- * @param {boolean} preserveWhitespace
- * @return {!Array<!HTMLElement>}
- */
-function splitText(el, key, splitOn, includePrevious, preserveWhitespace) {
-    // Combine any strange text nodes or empty whitespace.
-    el.normalize();
+ImagesLoaded.prototype.check = function() {
+  var _this = this;
+  this.progressedCount = 0;
+  this.hasAnyBroken = false;
+  // complete if no images
+  if ( !this.images.length ) {
+    this.complete();
+    return;
+  }
 
-    // Use fragment to prevent unnecessary DOM thrashing.
-    var elements = [];
-    var F = document.createDocumentFragment();
-
-    if (includePrevious) {
-        elements.push(el.previousSibling);
-    }
-
-    var allElements = [];
-    $(el.childNodes).some(function(next) {
-        if (next.tagName && !next.hasChildNodes()) {
-            // keep elements without child nodes (no text and no children)
-            allElements.push(next);
-            return;
-        }
-        // Recursively run through child nodes
-        if (next.childNodes && next.childNodes.length) {
-            allElements.push(next);
-            elements.push.apply(elements, splitText(next, key, splitOn, includePrevious, preserveWhitespace));
-            return;
-        }
-
-        // Get the text to split, trimming out the whitespace
-        /** @type {string} */
-        var wholeText = next.wholeText || '';
-        var contents = wholeText.trim();
-
-        // If there's no text left after trimming whitespace, continue the loop
-        if (contents.length) {
-            // insert leading space if there was one
-            if (wholeText[0] === ' ') {
-                allElements.push(createText(' '));
-            }
-            // Concatenate the split text children back into the full array
-            var useSegmenter = splitOn === "" && typeof Intl.Segmenter === "function";
-            each(useSegmenter ? Array.from(new Intl.Segmenter().segment(contents)).map(function(x){return x.segment}) : contents.split(splitOn), function (splitText, i) {
-                if (i && preserveWhitespace) {
-                    allElements.push(createElement(F, "whitespace", " ", preserveWhitespace));
-                }
-                var splitEl = createElement(F, key, splitText);
-                elements.push(splitEl);
-                allElements.push(splitEl);
-            }); 
-            // insert trailing space if there was one
-            if (wholeText[wholeText.length - 1] === ' ') {
-                allElements.push(createText(' '));
-            }
-        }
+  function onProgress( image, elem, message ) {
+    // HACK - Chrome triggers event before object properties have changed. #83
+    setTimeout( function() {
+      _this.progress( image, elem, message );
     });
+  }
 
-    each(allElements, function(el) {
-        appendChild(F, el);
-    });
+  this.images.forEach( function( loadingImage ) {
+    loadingImage.once( 'progress', onProgress );
+    loadingImage.check();
+  });
+};
 
-    // Clear out the existing element
-    el.innerHTML = "";
-    appendChild(el, F);
-    return elements;
+ImagesLoaded.prototype.progress = function( image, elem, message ) {
+  this.progressedCount++;
+  this.hasAnyBroken = this.hasAnyBroken || !image.isLoaded;
+  // progress event
+  this.emitEvent( 'progress', [ this, image, elem ] );
+  if ( this.jqDeferred && this.jqDeferred.notify ) {
+    this.jqDeferred.notify( this, image );
+  }
+  // check if completed
+  if ( this.progressedCount == this.images.length ) {
+    this.complete();
+  }
+
+  if ( this.options.debug && console ) {
+    console.log( 'progress: ' + message, image, elem );
+  }
+};
+
+ImagesLoaded.prototype.complete = function() {
+  var eventName = this.hasAnyBroken ? 'fail' : 'done';
+  this.isComplete = true;
+  this.emitEvent( eventName, [ this ] );
+  this.emitEvent( 'always', [ this ] );
+  if ( this.jqDeferred ) {
+    var jqMethod = this.hasAnyBroken ? 'reject' : 'resolve';
+    this.jqDeferred[ jqMethod ]( this );
+  }
+};
+
+// --------------------------  -------------------------- //
+
+function LoadingImage( img ) {
+  this.img = img;
 }
 
-/** an empty value */
-var _ = 0;
+LoadingImage.prototype = Object.create( EvEmitter.prototype );
 
-function copy(dest, src) {
-    for (var k in src) {
-        dest[k] = src[k];
-    }
-    return dest;
+LoadingImage.prototype.check = function() {
+  // If complete is true and browser supports natural sizes,
+  // try to check for image status manually.
+  var isComplete = this.getIsImageComplete();
+  if ( isComplete ) {
+    // report based on naturalWidth
+    this.confirm( this.img.naturalWidth !== 0, 'naturalWidth' );
+    return;
+  }
+
+  // If none of the checks above matched, simulate loading on detached element.
+  this.proxyImage = new Image();
+  this.proxyImage.addEventListener( 'load', this );
+  this.proxyImage.addEventListener( 'error', this );
+  // bind to image as well for Firefox. #191
+  this.img.addEventListener( 'load', this );
+  this.img.addEventListener( 'error', this );
+  this.proxyImage.src = this.img.src;
+};
+
+LoadingImage.prototype.getIsImageComplete = function() {
+  // check for non-zero, non-undefined naturalWidth
+  // fixes Safari+InfiniteScroll+Masonry bug infinite-scroll#671
+  return this.img.complete && this.img.naturalWidth;
+};
+
+LoadingImage.prototype.confirm = function( isLoaded, message ) {
+  this.isLoaded = isLoaded;
+  this.emitEvent( 'progress', [ this, this.img, message ] );
+};
+
+// ----- events ----- //
+
+// trigger specified handler for event type
+LoadingImage.prototype.handleEvent = function( event ) {
+  var method = 'on' + event.type;
+  if ( this[ method ] ) {
+    this[ method ]( event );
+  }
+};
+
+LoadingImage.prototype.onload = function() {
+  this.confirm( true, 'onload' );
+  this.unbindEvents();
+};
+
+LoadingImage.prototype.onerror = function() {
+  this.confirm( false, 'onerror' );
+  this.unbindEvents();
+};
+
+LoadingImage.prototype.unbindEvents = function() {
+  this.proxyImage.removeEventListener( 'load', this );
+  this.proxyImage.removeEventListener( 'error', this );
+  this.img.removeEventListener( 'load', this );
+  this.img.removeEventListener( 'error', this );
+};
+
+// -------------------------- Background -------------------------- //
+
+function Background( url, element ) {
+  this.url = url;
+  this.element = element;
+  this.img = new Image();
 }
 
-var WORDS = 'words';
+// inherit LoadingImage prototype
+Background.prototype = Object.create( LoadingImage.prototype );
 
-var wordPlugin = createPlugin(
-    /* by= */ WORDS,
-    /* depends= */ _,
-    /* key= */ 'word', 
-    /* split= */ function(el) {
-        return splitText(el, 'word', /\s+/, 0, 1)
-    }
-);
+Background.prototype.check = function() {
+  this.img.addEventListener( 'load', this );
+  this.img.addEventListener( 'error', this );
+  this.img.src = this.url;
+  // check if image is already complete
+  var isComplete = this.getIsImageComplete();
+  if ( isComplete ) {
+    this.confirm( this.img.naturalWidth !== 0, 'naturalWidth' );
+    this.unbindEvents();
+  }
+};
 
-var CHARS = "chars";
+Background.prototype.unbindEvents = function() {
+  this.img.removeEventListener( 'load', this );
+  this.img.removeEventListener( 'error', this );
+};
 
-var charPlugin = createPlugin(
-    /* by= */ CHARS,
-    /* depends= */ [WORDS],
-    /* key= */ "char", 
-    /* split= */ function(el, options, ctx) {
-        var results = [];
+Background.prototype.confirm = function( isLoaded, message ) {
+  this.isLoaded = isLoaded;
+  this.emitEvent( 'progress', [ this, this.element, message ] );
+};
 
-        each(ctx[WORDS], function(word, i) {
-            results.push.apply(results, splitText(word, "char", "", options.whitespace && i));
-        });
+// -------------------------- jQuery -------------------------- //
 
-        return results;
-    }
-);
+ImagesLoaded.makeJQueryPlugin = function( jQuery ) {
+  jQuery = jQuery || window.jQuery;
+  if ( !jQuery ) {
+    return;
+  }
+  // set local variable
+  $ = jQuery;
+  // $().imagesLoaded()
+  $.fn.imagesLoaded = function( options, callback ) {
+    var instance = new ImagesLoaded( this, options, callback );
+    return instance.jqDeferred.promise( $(this) );
+  };
+};
+// try making plugin
+ImagesLoaded.makeJQueryPlugin();
 
-/**
- * # Splitting
- * 
- * @param {import('./types').ISplittingOptions} opts
- * @return {!Array<*>}
- */
-function Splitting (opts) {
-  opts = opts || {};
-  var key = opts.key;
+// --------------------------  -------------------------- //
 
-  return $(opts.target || '[data-splitting]').map(function(el) {
-    var ctx = el['🍌'];  
-    if (!opts.force && ctx) {
-      return ctx;
-    }
+return ImagesLoaded;
 
-    ctx = el['🍌'] = { el: el };
-    var by = opts.by || getData(el, 'splitting');
-    if (!by || by == 'true') {
-      by = CHARS;
-    }
-    var items = resolve(by);
-    var opts2 = copy({}, opts);
-    each(items, function(plugin) {
-      if (plugin.split) {
-        var pluginBy = plugin.by;
-        var key2 = (key ? '-' + key : '') + plugin.key;
-        var results = plugin.split(el, opts2, ctx);
-        key2 && index(el, key2, results);
-        ctx[pluginBy] = results;
-        el.classList.add(pluginBy);
-      } 
-    });
+});
 
-    el.classList.add('splitting');
-    return ctx;
-  })
-}
+},{"ev-emitter":"../node_modules/ev-emitter/ev-emitter.js"}],"projects/src/js/utils.js":[function(require,module,exports) {
+"use strict";
 
-/**
- * # Splitting.html
- * 
- * @param {import('./types').ISplittingOptions} opts
- */
-function html(opts) {
-  opts = opts || {};
-  var parent = opts.target =  createElement();
-  parent.innerHTML = opts.content;
-  Splitting(opts);
-  return parent.outerHTML
-}
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.preloadImages = exports.map = exports.calcWinsize = void 0;
+var imagesLoaded = require('imagesloaded');
 
-Splitting.html = html;
-Splitting.add = add;
+// Map number x from range [a, b] to [c, d]
+var map = exports.map = function map(x, a, b, c, d) {
+  return (x - a) * (d - c) / (b - a) + c;
+};
 
-/**
- * Detects the grid by measuring which elements align to a side of it.
- * @param {!HTMLElement} el 
- * @param {import('../core/types').ISplittingOptions} options
- * @param {*} side 
- */
-function detectGrid(el, options, side) {
-    var items = $(options.matching || el.children, el);
-    var c = {};
+// viewport size
+var calcWinsize = exports.calcWinsize = function calcWinsize() {
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight
+  };
+};
 
-    each(items, function(w) {
-        var val = Math.round(w[side]);
-        (c[val] || (c[val] = [])).push(w);
-    });
-
-    return Object.keys(c).map(Number).sort(byNumber).map(selectFrom(c));
-}
-
-/**
- * Sorting function for numbers.
- * @param {number} a 
- * @param {number} b
- * @return {number} 
- */
-function byNumber(a, b) {
-    return a - b;
-}
-
-var linePlugin = createPlugin(
-    /* by= */ 'lines',
-    /* depends= */ [WORDS],
-    /* key= */ 'line',
-    /* split= */ function(el, options, ctx) {
-      return detectGrid(el, { matching: ctx[WORDS] }, 'offsetTop')
-    }
-);
-
-var itemPlugin = createPlugin(
-    /* by= */ 'items',
-    /* depends= */ _,
-    /* key= */ 'item', 
-    /* split= */ function(el, options) {
-        return $(options.matching || el.children, el)
-    }
-);
-
-var rowPlugin = createPlugin(
-    /* by= */ 'rows',
-    /* depends= */ _,
-    /* key= */ 'row', 
-    /* split= */ function(el, options) {
-        return detectGrid(el, options, "offsetTop");
-    }
-);
-
-var columnPlugin = createPlugin(
-    /* by= */ 'cols',
-    /* depends= */ _,
-    /* key= */ "col", 
-    /* split= */ function(el, options) {
-        return detectGrid(el, options, "offsetLeft");
-    }
-);
-
-var gridPlugin = createPlugin(
-    /* by= */ 'grid',
-    /* depends= */ ['rows', 'cols']
-);
-
-var LAYOUT = "layout";
-
-var layoutPlugin = createPlugin(
-    /* by= */ LAYOUT,
-    /* depends= */ _,
-    /* key= */ _,
-    /* split= */ function(el, opts) {
-        // detect and set options
-        var rows =  opts.rows = +(opts.rows || getData(el, 'rows') || 1);
-        var columns = opts.columns = +(opts.columns || getData(el, 'columns') || 1);
-
-        // Seek out the first <img> if the value is true 
-        opts.image = opts.image || getData(el, 'image') || el.currentSrc || el.src;
-        if (opts.image) {
-            var img = $("img", el)[0];
-            opts.image = img && (img.currentSrc || img.src);
-        }
-
-        // add optional image to background
-        if (opts.image) {
-            setProperty(el, "background-image", "url(" + opts.image + ")");
-        }
-
-        var totalCells = rows * columns;
-        var elements = [];
-
-        var container = createElement(_, "cell-grid");
-        while (totalCells--) {
-            // Create a span
-            var cell = createElement(container, "cell");
-            createElement(cell, "cell-inner");
-            elements.push(cell);
-        }
-
-        // Append elements back into the parent
-        appendChild(el, container);
-
-        return elements;
-    }
-);
-
-var cellRowPlugin = createPlugin(
-    /* by= */ "cellRows",
-    /* depends= */ [LAYOUT],
-    /* key= */ "row",
-    /* split= */ function(el, opts, ctx) {
-        var rowCount = opts.rows;
-        var result = Array2D(rowCount);
-
-        each(ctx[LAYOUT], function(cell, i, src) {
-            result[Math.floor(i / (src.length / rowCount))].push(cell);
-        });
-
-        return result;
-    }
-);
-
-var cellColumnPlugin = createPlugin(
-    /* by= */ "cellColumns",
-    /* depends= */ [LAYOUT],
-    /* key= */ "col",
-    /* split= */ function(el, opts, ctx) {
-        var columnCount = opts.columns;
-        var result = Array2D(columnCount);
-
-        each(ctx[LAYOUT], function(cell, i) {
-            result[i % columnCount].push(cell);
-        });
-
-        return result;
-    }
-);
-
-var cellPlugin = createPlugin(
-    /* by= */ "cells",
-    /* depends= */ ['cellRows', 'cellColumns'],
-    /* key= */ "cell", 
-    /* split= */ function(el, opt, ctx) { 
-        // re-index the layout as the cells
-        return ctx[LAYOUT];
-    }
-);
-
-// install plugins
-// word/char plugins
-add(wordPlugin);
-add(charPlugin);
-add(linePlugin);
-// grid plugins
-add(itemPlugin);
-add(rowPlugin);
-add(columnPlugin);
-add(gridPlugin);
-// cell-layout plugins
-add(layoutPlugin);
-add(cellRowPlugin);
-add(cellColumnPlugin);
-add(cellPlugin);
-
-return Splitting;
-
-})));
-
-},{}],"../node_modules/gsap/gsap-core.js":[function(require,module,exports) {
+// preload images
+var preloadImages = exports.preloadImages = function preloadImages() {
+  var selector = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'img';
+  return new Promise(function (resolve, reject) {
+    imagesLoaded(document.querySelectorAll(selector), resolve);
+  });
+};
+},{"imagesloaded":"../node_modules/imagesloaded/imagesloaded.js"}],"../node_modules/gsap/gsap-core.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -6113,229 +6029,982 @@ var _CSSPlugin = require("./CSSPlugin.js");
 var gsapWithCSS = exports.default = exports.gsap = _gsapCore.gsap.registerPlugin(_CSSPlugin.CSSPlugin) || _gsapCore.gsap,
   // to protect from tree shaking
   TweenMaxWithCSS = exports.TweenMax = gsapWithCSS.core.Tween;
-},{"./gsap-core.js":"../node_modules/gsap/gsap-core.js","./CSSPlugin.js":"../node_modules/gsap/CSSPlugin.js"}],"js/utils.js":[function(require,module,exports) {
+},{"./gsap-core.js":"../node_modules/gsap/gsap-core.js","./CSSPlugin.js":"../node_modules/gsap/CSSPlugin.js"}],"projects/src/js/gallery.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.preloadFonts = exports.lerp = exports.getMousePos = void 0;
-// Linear interpolation
-var lerp = exports.lerp = function lerp(a, b, n) {
-  return (1 - n) * a + n * b;
-};
-
-// Gets the mouse position
-var getMousePos = exports.getMousePos = function getMousePos(e) {
-  return {
-    x: e.clientX,
-    y: e.clientY
+exports.Gallery = void 0;
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+var Gallery = exports.Gallery = /*#__PURE__*/_createClass(function Gallery(el) {
+  _classCallCheck(this, Gallery);
+  this.DOM = {
+    el: el
   };
-};
-
-// Preload images
-var preloadFonts = exports.preloadFonts = function preloadFonts(id) {
-  return new Promise(function (resolve, reject) {
-    WebFont.load({
-      typekit: {
-        id: id
-      },
-      active: resolve
-    });
-  });
-};
-},{}],"js/cursor.js":[function(require,module,exports) {
+  this.DOM.images = this.DOM.el.querySelectorAll('.gallery__img');
+});
+},{}],"projects/src/js/menuItem.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports.MenuItem = void 0;
+var _gallery = require("./gallery");
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+var MenuItem = exports.MenuItem = /*#__PURE__*/_createClass(function MenuItem(item) {
+  _classCallCheck(this, MenuItem);
+  this.DOM = {
+    item: item
+  };
+  this.DOM.gallery = document.querySelector(this.DOM.item.href.substring(this.DOM.item.href.indexOf('#')));
+  this.gallery = new _gallery.Gallery(this.DOM.gallery);
+});
+},{"./gallery":"projects/src/js/gallery.js"}],"projects/src/js/menu.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Menu = void 0;
 var _gsap = require("gsap");
 var _utils = require("./utils");
+var _menuItem = require("./menuItem");
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
 function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
 function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-// Track the mouse position
-var mouse = {
-  x: 0,
-  y: 0
-};
-window.addEventListener('mousemove', function (ev) {
-  return mouse = (0, _utils.getMousePos)(ev);
+// calculate the viewport size
+var winsize = (0, _utils.calcWinsize)();
+window.addEventListener('resize', function () {
+  return winsize = (0, _utils.calcWinsize)();
 });
-var Cursor = exports.default = /*#__PURE__*/function () {
-  function Cursor(el) {
+var Menu = exports.Menu = /*#__PURE__*/function () {
+  function Menu() {
     var _this = this;
-    _classCallCheck(this, Cursor);
-    this.DOM = {
-      el: el
-    };
-    this.DOM.el.style.opacity = 0;
-    this.bounds = this.DOM.el.getBoundingClientRect();
-    this.renderedStyles = {
-      tx: {
-        previous: 0,
-        current: 0,
-        amt: 0.18
-      },
-      ty: {
-        previous: 0,
-        current: 0,
-        amt: 0.18
-      }
-    };
-    this.onMouseMoveEv = function () {
-      _this.renderedStyles.tx.previous = _this.renderedStyles.tx.current = mouse.x - _this.bounds.width / 2;
-      _this.renderedStyles.ty.previous = _this.renderedStyles.ty.previous = mouse.y - _this.bounds.height / 2;
-      _gsap.gsap.to(_this.DOM.el, {
-        duration: 0.9,
-        ease: 'Power3.easeOut',
-        opacity: 1
-      });
-      requestAnimationFrame(function () {
-        return _this.render();
-      });
-      window.removeEventListener('mousemove', _this.onMouseMoveEv);
-    };
-    window.addEventListener('mousemove', this.onMouseMoveEv);
+    _classCallCheck(this, Menu);
+    this.DOM = {};
+    // all frame links
+    this.DOM.frameLinks = _toConsumableArray(document.querySelectorAll('.oh'));
+    // frame links that are links to show only when the menu appears (after clicking on one of the sentence inline links)
+    this.DOM.frameLinksContent = this.DOM.frameLinks.filter(function (el) {
+      return el.classList.contains('view-content');
+    });
+    // remaining (the ones shown initially)
+    this.DOM.frameLinksInitial = this.DOM.frameLinks.filter(function (el) {
+      return !_this.DOM.frameLinksContent.includes(el);
+    });
+    // close menu button
+    this.DOM.closeCtrl = document.querySelector('.frame__close');
+    // content element
+    this.DOM.content = document.querySelector('.content');
+    // the links
+    this.DOM.menuItems = _toConsumableArray(this.DOM.content.querySelectorAll('.menu-item'));
+    // array of MenuItems
+    this.menuItems = [];
+    this.DOM.menuItems.forEach(function (item) {
+      return _this.menuItems.push(new _menuItem.MenuItem(item));
+    });
+    // remaining text (span.word)
+    this.DOM.textWords = _toConsumableArray(this.DOM.content.querySelectorAll('.content__quote > span.whitespace, .content__quote > span.word'));
+    // gallery deco element
+    this.DOM.galleryDeco = document.querySelector('.galleries > .galleries__deco');
+    // and gallery entry button
+    this.DOM.galleryButton = document.querySelector('.galleries > .galleries__button');
+    // check if we are at the initial page (sentence view) or the menu page (menu/gallery view)
+    this.isMenuPage = false;
+    this.init();
   }
-  return _createClass(Cursor, [{
-    key: "render",
-    value: function render() {
-      var _this2 = this;
-      this.renderedStyles['tx'].current = mouse.x - this.bounds.width / 2;
-      this.renderedStyles['ty'].current = mouse.y - this.bounds.height / 2;
-      for (var key in this.renderedStyles) {
-        this.renderedStyles[key].previous = (0, _utils.lerp)(this.renderedStyles[key].previous, this.renderedStyles[key].current, this.renderedStyles[key].amt);
-      }
-      this.DOM.el.style.transform = "translateX(".concat(this.renderedStyles['tx'].previous, "px) translateY(").concat(this.renderedStyles['ty'].previous, "px)");
-      requestAnimationFrame(function () {
-        return _this2.render();
+  return _createClass(Menu, [{
+    key: "init",
+    value: function init() {
+      // hide all the frame links that should be visible only after clicking on one of the sentence inline links
+      _gsap.gsap.set(this.DOM.frameLinksContent, {
+        pointerEvents: 'none'
       });
+      _gsap.gsap.set(this.DOM.frameLinksContent.map(function (el) {
+        return el.children;
+      }), {
+        y: '-100%'
+      });
+
+      // init/bind events
+      this.initEvents();
+    }
+  }, {
+    key: "initEvents",
+    value: function initEvents() {
+      var _this2 = this;
+      // click on one of the sentence inline links
+      this.DOM.menuItems.forEach(function (menuItem) {
+        menuItem.addEventListener('click', _this2.openMenu.bind(_this2));
+      });
+
+      // click the close menu control
+      this.DOM.closeCtrl.addEventListener('click', this.closeMenu.bind(this));
+      window.addEventListener('resize', function () {
+        if (!_this2.isMenuPage) return;
+        _gsap.gsap.set(_this2.DOM.menuItems, {
+          x: function x(_, target) {
+            return winsize.width * 0.6 - target.offsetLeft;
+          }
+        }, 0);
+      });
+    }
+    // show/hide gallery deco element
+  }, {
+    key: "toggleGalleryDeco",
+    value: function toggleGalleryDeco() {
+      var _this3 = this;
+      return _gsap.gsap.timeline({
+        defaults: {
+          duration: !this.isMenuPage ? 1 : 0.3,
+          ease: 'power4'
+        },
+        onStart: function onStart() {
+          return !_this3.isMenuPage ? _gsap.gsap.set(_this3.DOM.galleryDeco, {
+            x: '15%',
+            y: '100%'
+          }) : null;
+        }
+      }).to(this.DOM.galleryDeco, {
+        opacity: !this.isMenuPage ? 1 : 0,
+        x: !this.isMenuPage ? '0%' : '5%',
+        y: !this.isMenuPage ? '0%' : '100%'
+      }, !this.isMenuPage ? 0.5 : 0);
+    }
+  }, {
+    key: "showGalleryEntryButton",
+    value: function showGalleryEntryButton() {
+      var _this4 = this;
+      return _gsap.gsap.timeline({
+        onStart: function onStart() {
+          return _gsap.gsap.set(_this4.DOM.galleryButton, {
+            scale: 0.9
+          });
+        }
+      }).to(this.DOM.galleryButton, {
+        duration: 0.8,
+        ease: 'power4',
+        opacity: 1,
+        scale: 1
+      }, !this.isMenuPage ? 0.5 : 0);
+    }
+  }, {
+    key: "hideGalleryEntryButton",
+    value: function hideGalleryEntryButton() {
+      return _gsap.gsap.timeline().to(this.DOM.galleryButton, {
+        duration: 0.3,
+        ease: 'power4',
+        opacity: 0,
+        scale: 0.9
+      }, !this.isMenuPage ? 0.5 : 0);
+    }
+    // show links for the content or initial page
+  }, {
+    key: "toggleFrameLinks",
+    value: function toggleFrameLinks() {
+      var _this5 = this;
+      return _gsap.gsap.timeline({
+        defaults: {
+          duration: !this.isMenuPage ? 1 : 0.6,
+          ease: !this.isMenuPage ? 'power4.inOut' : 'power4'
+        },
+        onStart: function onStart() {
+          // pointer events logic for the frame links:
+          _gsap.gsap.set(!_this5.isMenuPage ? _this5.DOM.frameLinksInitial : _this5.DOM.frameLinksContent, {
+            pointerEvents: 'none'
+          });
+          _gsap.gsap.set(!_this5.isMenuPage ? _this5.DOM.frameLinksContent : _this5.DOM.frameLinksInitial, {
+            pointerEvents: 'auto'
+          });
+        }
+      }).to(this.DOM.frameLinksInitial.map(function (el) {
+        return el.children;
+      }), {
+        y: !this.isMenuPage ? '100%' : '0%'
+      }).to(this.DOM.frameLinksContent.map(function (el) {
+        return el.children;
+      }), {
+        y: !this.isMenuPage ? '0%' : '-100%'
+      }, 0);
+    }
+  }, {
+    key: "openMenu",
+    value: function openMenu(ev) {
+      var _this6 = this;
+      ev.preventDefault();
+      var clickedMenuItemIndex = this.DOM.menuItems.indexOf(ev.target);
+
+      // return if currently animating or if the clicked menu item is the current selected one
+      if (this.isAnimating || this.isMenuPage && this.currentMenuItem === clickedMenuItemIndex) return;
+      this.isAnimating = true;
+
+      // remove active class from the current menu item
+      if (this.isMenuPage) {
+        this.previousMenuItem = this.currentMenuItem;
+        this.DOM.menuItems[this.currentMenuItem].classList.remove('menu-item--active');
+      }
+      // index of clicked menu item
+      this.currentMenuItem = clickedMenuItemIndex;
+
+      // add class menu-item--active to the clicked menu item and content--menu to the content element
+      // related to the link underline animation (CSS)
+      ev.target.classList.add('menu-item--active');
+
+      // if we go from the sentence page to the menu page:
+      if (!this.isMenuPage) {
+        this.DOM.content.classList.add('content--menu');
+        this.togglePage();
+      }
+      // else if we click another menu item while on the menu page
+      else {
+        Promise.all([this.hideGalleryEntryButton(), this.closeGallery(this.previousMenuItem)]).then(function () {
+          return Promise.all([_this6.openGallery(), _this6.showGalleryEntryButton()]);
+        }).then(function () {
+          return _this6.isAnimating = false;
+        });
+      }
+    }
+  }, {
+    key: "closeMenu",
+    value: function closeMenu() {
+      if (this.isAnimating) return;
+      this.isAnimating = true;
+
+      // related to the link underline animation (CSS)
+      this.DOM.menuItems[this.currentMenuItem].classList.remove('menu-item--active');
+      this.DOM.content.classList.remove('content--menu');
+      this.togglePage();
+    }
+  }, {
+    key: "togglePage",
+    value: function togglePage() {
+      var _this7 = this;
+      Promise.all([this.toggleFrameLinks(), this.toggleLinksToMenu(), this[!this.isMenuPage ? 'openGallery' : 'closeGallery'](), this.toggleGalleryDeco(), this[!this.isMenuPage ? 'showGalleryEntryButton' : 'hideGalleryEntryButton']()]).then(function () {
+        _this7.isMenuPage = !_this7.isMenuPage;
+        _this7.isAnimating = false;
+      });
+    }
+    // animate links to the right side and the remaining text to the left, fading out
+    // or vice versa
+  }, {
+    key: "toggleLinksToMenu",
+    value: function toggleLinksToMenu() {
+      var _this8 = this;
+      return _gsap.gsap.timeline({
+        defaults: {
+          duration: !this.isMenuPage ? 1 : 0.6,
+          ease: !this.isMenuPage ? 'power4.inOut' : 'power4'
+        }
+      }).to(this.DOM.menuItems, {
+        x: function x(_, target) {
+          return !_this8.isMenuPage ? winsize.width * 0.6 - target.offsetLeft : 0;
+        },
+        stagger: !this.isMenuPage ? {
+          from: this.currentMenuItem,
+          amount: 0.15
+        } : 0
+      }, 0).to(this.DOM.textWords.sort(function (a, b) {
+        // words are ordered by its left value
+        if (a.offsetLeft < b.offsetLeft) {
+          return -1;
+        } else if (a.offsetLeft > b.offsetLeft) {
+          return 1;
+        }
+        return 0;
+      }), {
+        x: !this.isMenuPage ? -300 : 0,
+        opacity: !this.isMenuPage ? 0 : 1,
+        stagger: !this.isMenuPage ? 0.004 : -0.004
+      }, 0);
+    }
+  }, {
+    key: "openGallery",
+    value: function openGallery() {
+      // gallery of the cliked menu item
+      var gallery = this.menuItems[this.currentMenuItem].gallery;
+      return _gsap.gsap.timeline({
+        onStart: function onStart() {
+          _gsap.gsap.set(gallery.DOM.images, {
+            opacity: 0
+          }, 0);
+          gallery.DOM.el.classList.add('gallery--current');
+        }
+      }).to(gallery.DOM.images, {
+        duration: 0.1,
+        ease: 'expo.inOut',
+        opacity: function opacity(pos) {
+          return Math.max(1 - (pos * 0.1 + 0.1), 0.1);
+        },
+        x: '0%',
+        stagger: -0.08
+      }, !this.isMenuPage ? 0.5 : 0);
+    }
+  }, {
+    key: "closeGallery",
+    value: function closeGallery() {
+      var menuItemIndex = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.currentMenuItem;
+      // hide the current gallery
+      var galleryCurrent = this.menuItems[menuItemIndex].gallery;
+      return _gsap.gsap.timeline().to(galleryCurrent.DOM.images, {
+        duration: 0.3,
+        ease: 'expo',
+        opacity: 0,
+        stagger: -0.04,
+        onComplete: function onComplete() {
+          return galleryCurrent.DOM.el.classList.remove('gallery--current');
+        }
+      }, 0);
     }
   }]);
 }();
-},{"gsap":"../node_modules/gsap/index.js","./utils":"js/utils.js"}],"js/index.js":[function(require,module,exports) {
+},{"gsap":"../node_modules/gsap/index.js","./utils":"projects/src/js/utils.js","./menuItem":"projects/src/js/menuItem.js"}],"../node_modules/parcel-bundler/src/builtins/bundle-url.js":[function(require,module,exports) {
+var bundleURL = null;
+function getBundleURLCached() {
+  if (!bundleURL) {
+    bundleURL = getBundleURL();
+  }
+  return bundleURL;
+}
+function getBundleURL() {
+  // Attempt to find the URL of the current script and use that as the base URL
+  try {
+    throw new Error();
+  } catch (err) {
+    var matches = ('' + err.stack).match(/(https?|file|ftp|chrome-extension|moz-extension):\/\/[^)\n]+/g);
+    if (matches) {
+      return getBaseURL(matches[0]);
+    }
+  }
+  return '/';
+}
+function getBaseURL(url) {
+  return ('' + url).replace(/^((?:https?|file|ftp|chrome-extension|moz-extension):\/\/.+)?\/[^/]+(?:\?.*)?$/, '$1') + '/';
+}
+exports.getBundleURL = getBundleURLCached;
+exports.getBaseURL = getBaseURL;
+},{}],"../node_modules/parcel-bundler/src/builtins/css-loader.js":[function(require,module,exports) {
+var bundle = require('./bundle-url');
+function updateLink(link) {
+  var newLink = link.cloneNode();
+  newLink.onload = function () {
+    link.remove();
+  };
+  newLink.href = link.href.split('?')[0] + '?' + Date.now();
+  link.parentNode.insertBefore(newLink, link.nextSibling);
+}
+var cssTimeout = null;
+function reloadCSS() {
+  if (cssTimeout) {
+    return;
+  }
+  cssTimeout = setTimeout(function () {
+    var links = document.querySelectorAll('link[rel="stylesheet"]');
+    for (var i = 0; i < links.length; i++) {
+      if (bundle.getBaseURL(links[i].href) === bundle.getBundleURL()) {
+        updateLink(links[i]);
+      }
+    }
+    cssTimeout = null;
+  }, 50);
+}
+module.exports = reloadCSS;
+},{"./bundle-url":"../node_modules/parcel-bundler/src/builtins/bundle-url.js"}],"../node_modules/splitting/dist/splitting.css":[function(require,module,exports) {
+
+        var reloadCSS = require('_css_loader');
+        module.hot.dispose(reloadCSS);
+        module.hot.accept(reloadCSS);
+      
+},{"_css_loader":"../node_modules/parcel-bundler/src/builtins/css-loader.js"}],"../node_modules/splitting/dist/splitting-cells.css":[function(require,module,exports) {
+
+        var reloadCSS = require('_css_loader');
+        module.hot.dispose(reloadCSS);
+        module.hot.accept(reloadCSS);
+      
+},{"_css_loader":"../node_modules/parcel-bundler/src/builtins/css-loader.js"}],"../node_modules/splitting/dist/splitting.js":[function(require,module,exports) {
+var define;
+var global = arguments[3];
+(function (global, factory) {
+	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+	typeof define === 'function' && define.amd ? define(factory) :
+	(global.Splitting = factory());
+}(this, (function () { 'use strict';
+
+var root = document;
+var createText = root.createTextNode.bind(root);
+
+/**
+ * # setProperty
+ * Apply a CSS var
+ * @param {HTMLElement} el
+ * @param {string} varName 
+ * @param {string|number} value 
+ */
+function setProperty(el, varName, value) {
+    el.style.setProperty(varName, value);
+} 
+
+/**
+ * 
+ * @param {!HTMLElement} el 
+ * @param {!HTMLElement} child 
+ */
+function appendChild(el, child) {
+  return el.appendChild(child);
+}
+
+/**
+ * 
+ * @param {!HTMLElement} parent 
+ * @param {string} key 
+ * @param {string} text 
+ * @param {boolean} whitespace 
+ */
+function createElement(parent, key, text, whitespace) {
+  var el = root.createElement('span');
+  key && (el.className = key); 
+  if (text) { 
+      !whitespace && el.setAttribute("data-" + key, text);
+      el.textContent = text; 
+  }
+  return (parent && appendChild(parent, el)) || el;
+}
+
+/**
+ * 
+ * @param {!HTMLElement} el 
+ * @param {string} key 
+ */
+function getData(el, key) {
+  return el.getAttribute("data-" + key)
+}
+
+/**
+ * 
+ * @param {import('../types').Target} e 
+ * @param {!HTMLElement} parent
+ * @returns {!Array<!HTMLElement>}
+ */
+function $(e, parent) {
+    return !e || e.length == 0
+        ? // null or empty string returns empty array
+          []
+        : e.nodeName
+            ? // a single element is wrapped in an array
+              [e]
+            : // selector and NodeList are converted to Element[]
+              [].slice.call(e[0].nodeName ? e : (parent || root).querySelectorAll(e));
+}
+
+/**
+ * Creates and fills an array with the value provided
+ * @param {number} len
+ * @param {() => T} valueProvider
+ * @return {T}
+ * @template T
+ */
+function Array2D(len) {
+    var a = [];
+    for (; len--; ) {
+        a[len] = [];
+    }
+    return a;
+}
+
+/**
+ * A for loop wrapper used to reduce js minified size.
+ * @param {!Array<T>} items 
+ * @param {function(T):void} consumer
+ * @template T
+ */
+function each(items, consumer) {
+    items && items.some(consumer);
+}
+
+/**
+ * @param {T} obj 
+ * @return {function(string):*}
+ * @template T
+ */
+function selectFrom(obj) {
+    return function (key) {
+        return obj[key];
+    }
+}
+
+/**
+ * # Splitting.index
+ * Index split elements and add them to a Splitting instance.
+ *
+ * @param {HTMLElement} element
+ * @param {string} key 
+ * @param {!Array<!HTMLElement> | !Array<!Array<!HTMLElement>>} items 
+ */
+function index(element, key, items) {
+    var prefix = '--' + key;
+    var cssVar = prefix + "-index";
+
+    each(items, function (items, i) {
+        if (Array.isArray(items)) {
+            each(items, function(item) {
+                setProperty(item, cssVar, i);
+            });
+        } else {
+            setProperty(items, cssVar, i);
+        }
+    });
+
+    setProperty(element, prefix + "-total", items.length);
+}
+
+/**
+ * @type {Record<string, import('./types').ISplittingPlugin>}
+ */
+var plugins = {};
+
+/**
+ * @param {string} by
+ * @param {string} parent
+ * @param {!Array<string>} deps
+ * @return {!Array<string>}
+ */
+function resolvePlugins(by, parent, deps) {
+    // skip if already visited this dependency
+    var index = deps.indexOf(by);
+    if (index == -1) {
+        // if new to dependency array, add to the beginning
+        deps.unshift(by);
+
+        // recursively call this function for all dependencies
+        var plugin = plugins[by];
+        if (!plugin) {
+            throw new Error("plugin not loaded: " + by);
+        }
+        each(plugin.depends, function(p) {
+            resolvePlugins(p, by, deps);
+        });
+    } else {
+        // if this dependency was added already move to the left of
+        // the parent dependency so it gets loaded in order
+        var indexOfParent = deps.indexOf(parent);
+        deps.splice(index, 1);
+        deps.splice(indexOfParent, 0, by);
+    }
+    return deps;
+}
+
+/**
+ * Internal utility for creating plugins... essentially to reduce
+ * the size of the library
+ * @param {string} by 
+ * @param {string} key 
+ * @param {string[]} depends 
+ * @param {Function} split 
+ * @returns {import('./types').ISplittingPlugin}
+ */
+function createPlugin(by, depends, key, split) {
+    return {
+        by: by,
+        depends: depends,
+        key: key,
+        split: split
+    }
+}
+
+/**
+ *
+ * @param {string} by
+ * @returns {import('./types').ISplittingPlugin[]}
+ */
+function resolve(by) {
+    return resolvePlugins(by, 0, []).map(selectFrom(plugins));
+}
+
+/**
+ * Adds a new plugin to splitting
+ * @param {import('./types').ISplittingPlugin} opts
+ */
+function add(opts) {
+    plugins[opts.by] = opts;
+}
+
+/**
+ * # Splitting.split
+ * Split an element's textContent into individual elements
+ * @param {!HTMLElement} el  Element to split
+ * @param {string} key 
+ * @param {string} splitOn 
+ * @param {boolean} includePrevious 
+ * @param {boolean} preserveWhitespace
+ * @return {!Array<!HTMLElement>}
+ */
+function splitText(el, key, splitOn, includePrevious, preserveWhitespace) {
+    // Combine any strange text nodes or empty whitespace.
+    el.normalize();
+
+    // Use fragment to prevent unnecessary DOM thrashing.
+    var elements = [];
+    var F = document.createDocumentFragment();
+
+    if (includePrevious) {
+        elements.push(el.previousSibling);
+    }
+
+    var allElements = [];
+    $(el.childNodes).some(function(next) {
+        if (next.tagName && !next.hasChildNodes()) {
+            // keep elements without child nodes (no text and no children)
+            allElements.push(next);
+            return;
+        }
+        // Recursively run through child nodes
+        if (next.childNodes && next.childNodes.length) {
+            allElements.push(next);
+            elements.push.apply(elements, splitText(next, key, splitOn, includePrevious, preserveWhitespace));
+            return;
+        }
+
+        // Get the text to split, trimming out the whitespace
+        /** @type {string} */
+        var wholeText = next.wholeText || '';
+        var contents = wholeText.trim();
+
+        // If there's no text left after trimming whitespace, continue the loop
+        if (contents.length) {
+            // insert leading space if there was one
+            if (wholeText[0] === ' ') {
+                allElements.push(createText(' '));
+            }
+            // Concatenate the split text children back into the full array
+            var useSegmenter = splitOn === "" && typeof Intl.Segmenter === "function";
+            each(useSegmenter ? Array.from(new Intl.Segmenter().segment(contents)).map(function(x){return x.segment}) : contents.split(splitOn), function (splitText, i) {
+                if (i && preserveWhitespace) {
+                    allElements.push(createElement(F, "whitespace", " ", preserveWhitespace));
+                }
+                var splitEl = createElement(F, key, splitText);
+                elements.push(splitEl);
+                allElements.push(splitEl);
+            }); 
+            // insert trailing space if there was one
+            if (wholeText[wholeText.length - 1] === ' ') {
+                allElements.push(createText(' '));
+            }
+        }
+    });
+
+    each(allElements, function(el) {
+        appendChild(F, el);
+    });
+
+    // Clear out the existing element
+    el.innerHTML = "";
+    appendChild(el, F);
+    return elements;
+}
+
+/** an empty value */
+var _ = 0;
+
+function copy(dest, src) {
+    for (var k in src) {
+        dest[k] = src[k];
+    }
+    return dest;
+}
+
+var WORDS = 'words';
+
+var wordPlugin = createPlugin(
+    /* by= */ WORDS,
+    /* depends= */ _,
+    /* key= */ 'word', 
+    /* split= */ function(el) {
+        return splitText(el, 'word', /\s+/, 0, 1)
+    }
+);
+
+var CHARS = "chars";
+
+var charPlugin = createPlugin(
+    /* by= */ CHARS,
+    /* depends= */ [WORDS],
+    /* key= */ "char", 
+    /* split= */ function(el, options, ctx) {
+        var results = [];
+
+        each(ctx[WORDS], function(word, i) {
+            results.push.apply(results, splitText(word, "char", "", options.whitespace && i));
+        });
+
+        return results;
+    }
+);
+
+/**
+ * # Splitting
+ * 
+ * @param {import('./types').ISplittingOptions} opts
+ * @return {!Array<*>}
+ */
+function Splitting (opts) {
+  opts = opts || {};
+  var key = opts.key;
+
+  return $(opts.target || '[data-splitting]').map(function(el) {
+    var ctx = el['🍌'];  
+    if (!opts.force && ctx) {
+      return ctx;
+    }
+
+    ctx = el['🍌'] = { el: el };
+    var by = opts.by || getData(el, 'splitting');
+    if (!by || by == 'true') {
+      by = CHARS;
+    }
+    var items = resolve(by);
+    var opts2 = copy({}, opts);
+    each(items, function(plugin) {
+      if (plugin.split) {
+        var pluginBy = plugin.by;
+        var key2 = (key ? '-' + key : '') + plugin.key;
+        var results = plugin.split(el, opts2, ctx);
+        key2 && index(el, key2, results);
+        ctx[pluginBy] = results;
+        el.classList.add(pluginBy);
+      } 
+    });
+
+    el.classList.add('splitting');
+    return ctx;
+  })
+}
+
+/**
+ * # Splitting.html
+ * 
+ * @param {import('./types').ISplittingOptions} opts
+ */
+function html(opts) {
+  opts = opts || {};
+  var parent = opts.target =  createElement();
+  parent.innerHTML = opts.content;
+  Splitting(opts);
+  return parent.outerHTML
+}
+
+Splitting.html = html;
+Splitting.add = add;
+
+/**
+ * Detects the grid by measuring which elements align to a side of it.
+ * @param {!HTMLElement} el 
+ * @param {import('../core/types').ISplittingOptions} options
+ * @param {*} side 
+ */
+function detectGrid(el, options, side) {
+    var items = $(options.matching || el.children, el);
+    var c = {};
+
+    each(items, function(w) {
+        var val = Math.round(w[side]);
+        (c[val] || (c[val] = [])).push(w);
+    });
+
+    return Object.keys(c).map(Number).sort(byNumber).map(selectFrom(c));
+}
+
+/**
+ * Sorting function for numbers.
+ * @param {number} a 
+ * @param {number} b
+ * @return {number} 
+ */
+function byNumber(a, b) {
+    return a - b;
+}
+
+var linePlugin = createPlugin(
+    /* by= */ 'lines',
+    /* depends= */ [WORDS],
+    /* key= */ 'line',
+    /* split= */ function(el, options, ctx) {
+      return detectGrid(el, { matching: ctx[WORDS] }, 'offsetTop')
+    }
+);
+
+var itemPlugin = createPlugin(
+    /* by= */ 'items',
+    /* depends= */ _,
+    /* key= */ 'item', 
+    /* split= */ function(el, options) {
+        return $(options.matching || el.children, el)
+    }
+);
+
+var rowPlugin = createPlugin(
+    /* by= */ 'rows',
+    /* depends= */ _,
+    /* key= */ 'row', 
+    /* split= */ function(el, options) {
+        return detectGrid(el, options, "offsetTop");
+    }
+);
+
+var columnPlugin = createPlugin(
+    /* by= */ 'cols',
+    /* depends= */ _,
+    /* key= */ "col", 
+    /* split= */ function(el, options) {
+        return detectGrid(el, options, "offsetLeft");
+    }
+);
+
+var gridPlugin = createPlugin(
+    /* by= */ 'grid',
+    /* depends= */ ['rows', 'cols']
+);
+
+var LAYOUT = "layout";
+
+var layoutPlugin = createPlugin(
+    /* by= */ LAYOUT,
+    /* depends= */ _,
+    /* key= */ _,
+    /* split= */ function(el, opts) {
+        // detect and set options
+        var rows =  opts.rows = +(opts.rows || getData(el, 'rows') || 1);
+        var columns = opts.columns = +(opts.columns || getData(el, 'columns') || 1);
+
+        // Seek out the first <img> if the value is true 
+        opts.image = opts.image || getData(el, 'image') || el.currentSrc || el.src;
+        if (opts.image) {
+            var img = $("img", el)[0];
+            opts.image = img && (img.currentSrc || img.src);
+        }
+
+        // add optional image to background
+        if (opts.image) {
+            setProperty(el, "background-image", "url(" + opts.image + ")");
+        }
+
+        var totalCells = rows * columns;
+        var elements = [];
+
+        var container = createElement(_, "cell-grid");
+        while (totalCells--) {
+            // Create a span
+            var cell = createElement(container, "cell");
+            createElement(cell, "cell-inner");
+            elements.push(cell);
+        }
+
+        // Append elements back into the parent
+        appendChild(el, container);
+
+        return elements;
+    }
+);
+
+var cellRowPlugin = createPlugin(
+    /* by= */ "cellRows",
+    /* depends= */ [LAYOUT],
+    /* key= */ "row",
+    /* split= */ function(el, opts, ctx) {
+        var rowCount = opts.rows;
+        var result = Array2D(rowCount);
+
+        each(ctx[LAYOUT], function(cell, i, src) {
+            result[Math.floor(i / (src.length / rowCount))].push(cell);
+        });
+
+        return result;
+    }
+);
+
+var cellColumnPlugin = createPlugin(
+    /* by= */ "cellColumns",
+    /* depends= */ [LAYOUT],
+    /* key= */ "col",
+    /* split= */ function(el, opts, ctx) {
+        var columnCount = opts.columns;
+        var result = Array2D(columnCount);
+
+        each(ctx[LAYOUT], function(cell, i) {
+            result[i % columnCount].push(cell);
+        });
+
+        return result;
+    }
+);
+
+var cellPlugin = createPlugin(
+    /* by= */ "cells",
+    /* depends= */ ['cellRows', 'cellColumns'],
+    /* key= */ "cell", 
+    /* split= */ function(el, opt, ctx) { 
+        // re-index the layout as the cells
+        return ctx[LAYOUT];
+    }
+);
+
+// install plugins
+// word/char plugins
+add(wordPlugin);
+add(charPlugin);
+add(linePlugin);
+// grid plugins
+add(itemPlugin);
+add(rowPlugin);
+add(columnPlugin);
+add(gridPlugin);
+// cell-layout plugins
+add(layoutPlugin);
+add(cellRowPlugin);
+add(cellColumnPlugin);
+add(cellPlugin);
+
+return Splitting;
+
+})));
+
+},{}],"projects/src/js/index.js":[function(require,module,exports) {
 "use strict";
 
+var _utils = require("./utils");
+var _menu = require("./menu");
 require("splitting/dist/splitting.css");
 require("splitting/dist/splitting-cells.css");
 var _splitting2 = _interopRequireDefault(require("splitting"));
-var _gsap = require("gsap");
-var _utils = require("./utils");
-var _cursor = _interopRequireDefault(require("./cursor"));
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
-// Preload typekit fonts
-(0, _utils.preloadFonts)('lwc3axy').then(function () {
-  return document.body.classList.remove('loading');
+// initialize Splitting
+var splitting = (0, _splitting2.default)({
+  by: 'words'
 });
-
-// Call the splittingjs to transform the data-splitting texts to spans of chars 
-(0, _splitting2.default)();
-
-// Custom cursor
-new _cursor.default(document.querySelector('.cursor'));
-
-// DOM elements
-var DOM = {
-  content: {
-    home: {
-      section: document.querySelector('.content__item--home'),
-      get chars() {
-        return this.section.querySelectorAll('.content__paragraph .word > .char, .whitespace');
-      },
-      isVisible: true
-    },
-    about: {
-      section: document.querySelector('.content__item--about'),
-      get chars() {
-        return this.section.querySelectorAll('.content__paragraph .word > .char, .whitespace');
-      },
-      get picture() {
-        return this.section.querySelector('.content__figure');
-      },
-      isVisible: false
-    }
-  },
-  links: {
-    about: {
-      anchor: document.querySelector('a.frame__about'),
-      get stateElement() {
-        return this.anchor.children;
-      }
-    },
-    home: document.querySelector('a.frame__home')
-  }
-};
-
-// The gsap timeline (and some default settings) where the magic happens
-var timelineSettings = {
-  staggerValue: 0.014,
-  charsDuration: 0.5
-};
-var timeline = _gsap.gsap.timeline({
-  paused: true
-}).addLabel('start')
-// Stagger the animation of the home section chars
-.staggerTo(DOM.content.home.chars, timelineSettings.charsDuration, {
-  ease: 'Power3.easeIn',
-  y: '-100%',
-  opacity: 0
-}, timelineSettings.staggerValue, 'start')
-// Here we do the switch
-// We need to toggle the current class for the content sections
-.addLabel('switchtime').add(function () {
-  DOM.content.home.section.classList.toggle('content__item--current');
-  DOM.content.about.section.classList.toggle('content__item--current');
-})
-// Change the body's background color
-.to(document.body, {
-  duration: 0.8,
-  ease: 'Power1.easeInOut',
-  backgroundColor: '#c3b996'
-}, 'switchtime-=timelineSettings.charsDuration/4')
-// Start values for the about section elements that will animate in
-.set(DOM.content.about.chars, {
-  y: '100%'
-}, 'switchtime').set(DOM.content.about.picture, {
-  y: '40%',
-  rotation: -4,
-  opacity: 0
-}, 'switchtime')
-// Stagger the animation of the about section chars
-.staggerTo(DOM.content.about.chars, timelineSettings.charsDuration, {
-  ease: 'Power3.easeOut',
-  y: '0%'
-}, timelineSettings.staggerValue, 'switchtime')
-// Finally, animate the picture in
-.to(DOM.content.about.picture, 0.8, {
-  ease: 'Power3.easeOut',
-  y: '0%',
-  opacity: 1,
-  rotation: 0
-}, 'switchtime+=0.6');
-
-// Clicking the about and homepage links will toggle the content area, by playing and reversing the timeline
-// Need to switch current state for the about/close links
-var switchContent = function switchContent() {
-  DOM.links.about.stateElement[0].classList[DOM.content.about.isVisible ? 'add' : 'remove']('frame__about-item--current');
-  DOM.links.about.stateElement[1].classList[DOM.content.about.isVisible ? 'remove' : 'add']('frame__about-item--current');
-  timeline[DOM.content.about.isVisible ? 'reverse' : 'play']();
-  DOM.content.about.isVisible = !DOM.content.about.isVisible;
-  DOM.content.home.isVisible = !DOM.content.about.isVisible;
-};
-DOM.links.about.anchor.addEventListener('click', function () {
-  return switchContent();
+(0, _utils.preloadImages)().then(function () {
+  document.body.classList.remove('loading');
+  new _menu.Menu();
 });
-DOM.links.home.addEventListener('click', function () {
-  if (DOM.content.home.isVisible) return;
-  switchContent();
-});
-},{"splitting/dist/splitting.css":"../node_modules/splitting/dist/splitting.css","splitting/dist/splitting-cells.css":"../node_modules/splitting/dist/splitting-cells.css","splitting":"../node_modules/splitting/dist/splitting.js","gsap":"../node_modules/gsap/index.js","./utils":"js/utils.js","./cursor":"js/cursor.js"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"./utils":"projects/src/js/utils.js","./menu":"projects/src/js/menu.js","splitting/dist/splitting.css":"../node_modules/splitting/dist/splitting.css","splitting/dist/splitting-cells.css":"../node_modules/splitting/dist/splitting-cells.css","splitting":"../node_modules/splitting/dist/splitting.js"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -6504,5 +7173,5 @@ function hmrAcceptRun(bundle, id) {
     return true;
   }
 }
-},{}]},{},["../node_modules/parcel-bundler/src/builtins/hmr-runtime.js","js/index.js"], null)
-//# sourceMappingURL=/js.00a46daa.js.map
+},{}]},{},["../node_modules/parcel-bundler/src/builtins/hmr-runtime.js","projects/src/js/index.js"], null)
+//# sourceMappingURL=/js.86e4f097.js.map
